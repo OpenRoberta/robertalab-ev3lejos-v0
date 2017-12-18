@@ -1433,7 +1433,7 @@ public class Hal {
         float[] sample = new float[sampleProvider.sampleSize()];
         sampleProvider.fetchSample(sample, 0);
 
-        return Math.round(sample[0]);
+        return Math.round(sample[0] * 100);
     }
 
     // END Sensoren Sound ---
