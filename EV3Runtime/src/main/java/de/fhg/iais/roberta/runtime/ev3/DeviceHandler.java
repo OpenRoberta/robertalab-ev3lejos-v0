@@ -10,6 +10,7 @@ import de.fhg.iais.roberta.components.Sensor;
 import de.fhg.iais.roberta.components.UsedSensor;
 import de.fhg.iais.roberta.mode.action.ev3.ActorPort;
 import de.fhg.iais.roberta.mode.sensor.ev3.SensorPort;
+import de.fhg.iais.roberta.sensors.HiTechnicColorSensorV2;
 import de.fhg.iais.roberta.util.dbc.DbcException;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.lcd.TextLCD;
@@ -39,6 +40,7 @@ public class DeviceHandler {
     private final Map<SensorPort, SampleProviderBean[]> lejosSensors = new HashMap<>();
     private EV3GyroSensor gyroSensor = null;
     private HiTechnicCompass hiTechnicCompass = null;
+    private Map<SensorPort, HiTechnicColorSensorV2> hiTechnicColorSensors = new HashMap<>();
 
     private final Map<ActorPort, RegulatedMotor> lejosRegulatedMotors = new HashMap<>();
     private final Map<ActorPort, EncoderMotor> lejosUnregulatedMotors = new HashMap<>();
@@ -107,6 +109,13 @@ public class DeviceHandler {
             throw new DbcException("No HiTechnic Compass Sensor Connected!");
         }
         return this.hiTechnicCompass;
+    }
+
+    public HiTechnicColorSensorV2 getHiTecColorSensorV2(SensorPort sensorPort) {
+        if ( !this.hiTechnicColorSensors.containsKey(sensorPort) ) {
+            throw new DbcException("No HiTechnic Color Sensor V2 connected at port " + sensorPort.getPortNumber() + "!");
+        }
+        return this.hiTechnicColorSensors.get(sensorPort);
     }
 
     /**
@@ -212,6 +221,11 @@ public class DeviceHandler {
                     break;
                 case IRSEEKER:
                     this.lejosSensors.put(sensorPort, sensorSampleProviders(new HiTechnicIRSeekerV2(hardwarePort)));
+                    break;
+                case HT_COLOR:
+                    HiTechnicColorSensorV2 hiTechnicColorSensorV2 = new HiTechnicColorSensorV2(hardwarePort);
+                    this.hiTechnicColorSensors.put(sensorPort, hiTechnicColorSensorV2);
+                    this.lejosSensors.put(sensorPort, sensorSampleProviders(hiTechnicColorSensorV2));
                     break;
                 default:
                     throw new DbcException("Sensor type " + sensorType.getType() + " does not exists!");

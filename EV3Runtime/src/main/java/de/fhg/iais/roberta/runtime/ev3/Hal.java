@@ -24,17 +24,9 @@ import de.fhg.iais.roberta.mode.action.ev3.BlinkMode;
 import de.fhg.iais.roberta.mode.action.ev3.BrickLedColor;
 import de.fhg.iais.roberta.mode.action.ev3.ShowPicture;
 import de.fhg.iais.roberta.mode.general.PickColor;
-import de.fhg.iais.roberta.mode.sensor.ev3.BrickKey;
-import de.fhg.iais.roberta.mode.sensor.ev3.ColorSensorMode;
-import de.fhg.iais.roberta.mode.sensor.ev3.CompassSensorMode;
-import de.fhg.iais.roberta.mode.sensor.ev3.GyroSensorMode;
-import de.fhg.iais.roberta.mode.sensor.ev3.IRSeekerSensorMode;
-import de.fhg.iais.roberta.mode.sensor.ev3.InfraredSensorMode;
-import de.fhg.iais.roberta.mode.sensor.ev3.MotorTachoMode;
-import de.fhg.iais.roberta.mode.sensor.ev3.SensorPort;
-import de.fhg.iais.roberta.mode.sensor.ev3.SoundSensorMode;
-import de.fhg.iais.roberta.mode.sensor.ev3.UltrasonicSensorMode;
+import de.fhg.iais.roberta.mode.sensor.ev3.*;
 import de.fhg.iais.roberta.runtime.Utils;
+import de.fhg.iais.roberta.sensors.HiTechnicColorSensorV2;
 import de.fhg.iais.roberta.util.dbc.DbcException;
 import lejos.hardware.ev3.EV3;
 import lejos.hardware.ev3.LocalEV3;
@@ -379,12 +371,23 @@ public class Hal {
     private String getHalMethodName(IMode mode, SensorType sensorType) {
         switch ( mode.toString() ) {
             case "COLOUR":
+                if (sensorType == SensorType.HT_COLOR) {
+                    return "getHiTecColorSensorV2Colour";
+                }
                 return "getColorSensorColour";
             case "RED":
                 return "getColorSensorRed";
+            case "LIGHT":
+                return "getHiTecColorSensorV2Light";
             case "RGB":
+                if (sensorType == SensorType.HT_COLOR) {
+                    return "getHiTecColorSensorV2Rgb";
+                }
                 return "getColorSensorRgb";
             case "AMBIENTLIGHT":
+                if (sensorType == SensorType.HT_COLOR) {
+                    return "getHiTecColorSensorV2Ambient";
+                }
                 return "getColorSensorAmbient";
             case "RATE":
                 return "getGyroSensorRate";
@@ -1262,6 +1265,59 @@ public class Hal {
     }
 
     // END Sensoren IRSeekerSensor ---
+    // --- Sensor IRColorV2 ---
+
+    public synchronized PickColor getHiTecColorSensorV2Colour(SensorPort sensorPort) {
+        float[] sample = fetchSample(sensorPort, HiTecColorSensorV2Mode.COLOUR);
+        int colorId = (int) sample[0];
+        return PickColor.getByHiTecColorId(colorId);
+    }
+
+    public synchronized float getHiTecColorSensorV2Light(SensorPort sensorPort) {
+        List<Float> rgba = fetchSampleAsArrayList(sensorPort, HiTecColorSensorV2Mode.LIGHT, 100.0f);
+        return rgba.get(3);
+    }
+
+    public synchronized float getHiTecColorSensorV2Ambient(SensorPort sensorPort) {
+        List<Float> rgba = fetchSampleAsArrayList(sensorPort, HiTecColorSensorV2Mode.AMBIENTLIGHT, 1.0f);
+        float light = (rgba.get(3) * 100.0f) / 38200.0f;
+        return Math.min(light, 100.0f);
+    }
+
+    public synchronized ArrayList<Float> getHiTecColorSensorV2Rgb(SensorPort sensorPort) {
+        ArrayList<Float> rgba = fetchSampleAsArrayList(sensorPort, HiTecColorSensorV2Mode.RGB, 255.0f);
+        rgba.remove(3);
+        return rgba;
+    }
+
+    private ArrayList<Float> fetchSampleAsArrayList(SensorPort sensorPort, IMode mode, float multiplyBy){
+        float[] sample = fetchSample(sensorPort, mode);
+        ArrayList<Float> result = new ArrayList<>();
+        for (float value : sample) {
+            result.add(value * multiplyBy);
+        }
+        return result;
+    }
+
+    private float[] fetchSample(SensorPort sensorPort, IMode mode) {
+        SampleProvider sampleProvider = this.deviceHandler.getProvider(sensorPort, mode.getValues()[0]);
+        float[] sample = new float[sampleProvider.sampleSize()];
+        sampleProvider.fetchSample(sample, 0);
+        return sample;
+    }
+
+    public void setHiTecColorV2PowerMainsFrequency50Hz(SensorPort sensorPort){
+        this.deviceHandler.getHiTecColorSensorV2(sensorPort)
+            .setPowerMainsFrequency(HiTechnicColorSensorV2.PowerMainsFrequency.FREQUENCY_50Hz);
+    }
+
+    public void setHiTecColorV2PowerMainsFrequency60Hz(SensorPort sensorPort){
+        this.deviceHandler.getHiTecColorSensorV2(sensorPort)
+            .setPowerMainsFrequency(HiTechnicColorSensorV2.PowerMainsFrequency.FREQUENCY_60Hz);
+    }
+
+
+    // END Sensoren IRColorV2 ---
     // --- Sensor Gyrosensor ---
 
     /**
